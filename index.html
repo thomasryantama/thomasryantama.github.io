@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Detektif Pemilah Sampah - Edisi Spesial</title>
+    <style>
+        /* =========================================
+           CSS - TAMPILAN DAN DESAIN UI
+           ========================================= */
+        :root {
+            --primary: #FFB703;
+            --secondary: #FB8500;
+            --bg-color: #F8F9FA;
+            --text-main: #2F3542;
+            --card-bg: #FFFFFF;
+            
+            --org-color: #4CAF50;
+            --org-bg: #E8F5E9;
+            
+            --anorg-color: #2196F3;
+            --anorg-bg: #E3F2FD;
+            
+            --b3-color: #F44336;
+            --b3-bg: #FFEBEE;
+            
+            --shadow: 0 8px 16px rgba(0,0,0,0.08);
+            --radius: 16px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Nunito', 'Segoe UI', 'Comic Sans MS', sans-serif;
+            user-select: none; 
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            overflow-x: hidden;
+            padding-bottom: 40px;
+        }
+
+        /* HEADER & KONTROL AUDIO */
+        header {
+            text-align: center;
+            padding: 20px 10px;
+            background-color: #FFF;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+            border-bottom: 4px solid var(--primary);
+            position: relative;
+        }
+
+        header h1 {
+            font-size: 2.2rem;
+            color: #FF8F00;
+            margin-bottom: 5px;
+            text-shadow: 1px 1px 0px #FFE082;
+        }
+
+        header p { font-size: 1rem; color: #555; font-weight: bold; }
+
+        #btn-mute {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: #EEE;
+            border: none;
+            font-size: 1.5rem;
+            padding: 10px;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            transition: 0.2s;
+        }
+        #btn-mute:hover { background: #E0E0E0; transform: scale(1.1); }
+
+        /* HUD (Papan Informasi) */
+        #hud {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin: 0 auto 30px;
+            max-width: 900px;
+            padding: 0 15px;
+        }
+
+        .hud-card {
+            background: var(--card-bg);
+            padding: 10px 15px;
+            border-radius: 30px;
+            box-shadow: var(--shadow);
+            font-size: 1.1rem;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            border: 2px solid #EEE;
+        }
+
+        .time-text { color: #E91E63; animation: none; }
+        .time-text.urgent { animation: pulse 1s infinite; color: #D32F2F; border-color: #D32F2F; }
+        .score-text { color: #FF9800; }
+        .target-text { color: #2196F3; }
+        .highscore-text { color: #9C27B0; border-color: #E1BEE7; background: #F3E5F5; }
+
+        /* AREA PERMAINAN */
+        main {
+            max-width: 1000px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            padding: 0 15px;
+        }
+
+        #item-pool {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+            min-height: 130px;
+            padding: 20px;
+            background: #FFF;
+            border-radius: var(--radius);
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.05);
+            border: 2px dashed #CCC;
+        }
+
+        /* Kartu Sampah */
+        .item-card {
+            background: var(--card-bg);
+            border: 2px solid #E0E0E0;
+            border-radius: 12px;
+            padding: 10px 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: grab;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+            touch-action: none; 
+            z-index: 10;
+            width: 100px;
+            text-align: center;
+        }
+        .item-card:hover { transform: scale(1.05); border-color: var(--primary); }
+        .item-card:active { cursor: grabbing; }
+        .item-icon { font-size: 3rem; line-height: 1; margin-bottom: 5px; pointer-events: none; }
+        .item-name { font-size: 0.85rem; font-weight: bold; pointer-events: none; }
+
+        /* Drop Zones */
+        #drop-zones {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+
+        .drop-zone {
+            border-radius: var(--radius);
+            padding: 20px 10px;
+            text-align: center;
+            border: 4px dashed transparent;
+            transition: all 0.3s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 220px;
+        }
+        .drop-zone.organik { background: var(--org-bg); border-color: #A5D6A7; color: #2E7D32; }
+        .drop-zone.anorganik { background: var(--anorg-bg); border-color: #90CAF9; color: #1565C0; }
+        .drop-zone.b3 { background: var(--b3-bg); border-color: #EF9A9A; color: #C62828; }
+
+        .drop-zone.drag-over { transform: scale(1.03); border-style: solid; box-shadow: 0 10px 20px rgba(0,0,0,0.15); }
+        .drop-zone.organik.drag-over { border-color: var(--org-color); background: #C8E6C9;}
+        .drop-zone.anorganik.drag-over { border-color: var(--anorg-color); background: #BBDEFB;}
+        .drop-zone.b3.drag-over { border-color: var(--b3-color); background: #FFCDD2;}
+
+        .bin-icon { font-size: 3.5rem; margin-bottom: 10px; }
+        .bin-title { font-size: 1.3rem; font-weight: bold; margin-bottom: 5px; }
+        .bin-desc { font-size: 0.85rem; opacity: 0.8; margin-bottom: 15px; }
+        .bin-items { display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; width: 100%; }
+        .bin-items .item-card { width: 60px; padding: 5px; transform: scale(0.9); border: none; background: transparent; box-shadow: none;}
+        .bin-items .item-card .item-name { display: none; }
+        .bin-items .item-card .item-icon { font-size: 2rem; }
+
+        /* FEEDBACK BANNER */
+        #feedback-banner {
+            position: fixed;
+            top: -100px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 15px 30px;
+            border-radius: 50px;
+            color: #FFF;
+            font-weight: bold;
+            font-size: 1.1rem;
+            z-index: 10000;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+            transition: top 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+            text-align: center;
+            min-width: 320px;
+            max-width: 90%;
+        }
+        #feedback-banner.show { top: 20px; }
+        .bg-success { background: linear-gradient(135deg, #4CAF50, #2E7D32); }
+        .bg-error { background: linear-gradient(135deg, #FF9800, #F44336); }
+        
+        /* OVERLAYS & MODALS (Start, Win, Lose) */
+        .overlay-modal {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(5px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+        .overlay-modal.active { opacity: 1; pointer-events: auto; }
+        .modal-content {
+            background: #FFF;
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+            border: 4px solid var(--primary);
+            transform: scale(0.8);
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            max-width: 90%;
+            width: 400px;
+        }
+        .overlay-modal.active .modal-content { transform: scale(1); }
+        
+        .modal-title { font-size: 2.2rem; margin-bottom: 15px; }
+        .modal-desc { font-size: 1.1rem; color: #555; margin-bottom: 20px; line-height: 1.5; }
+        
+        .score-board {
+            background: #F8F9FA;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            border: 2px dashed #CCC;
+        }
+        .score-row { display: flex; justify-content: space-between; font-size: 1.1rem; margin-bottom: 5px; }
+        .score-total { font-size: 1.5rem; font-weight: bold; color: var(--secondary); margin-top: 10px; border-top: 2px solid #EEE; padding-top: 10px;}
+        .new-record { color: #E91E63; font-weight: bold; animation: pulse 1s infinite; display: none; margin-top: 5px;}
+
+        .btn {
+            background: var(--secondary);
+            color: #FFF;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            border-radius: 30px;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+            transition: all 0.2s;
+            width: 100%;
+        }
+        .btn:hover { background: #E85D04; transform: translateY(-3px); box-shadow: 0 6px 12px rgba(0,0,0,0.25); }
+        .btn:active { transform: translateY(0); }
+
+        /* ANIMASI */
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px) rotate(-5deg); } 75% { transform: translateX(5px) rotate(5deg); } }
+        .shake { animation: shake 0.4s ease; }
+        .confetti { position: absolute; width: 10px; height: 10px; background-color: #f2d74e; opacity: 0; pointer-events: none; }
+
+        @media (max-width: 768px) {
+            #drop-zones { grid-template-columns: 1fr; }
+            .drop-zone { min-height: 120px; flex-direction: row; text-align: left; padding: 15px; }
+            .bin-icon { margin-right: 15px; margin-bottom: 0; }
+            .bin-info { flex: 1; }
+            .bin-items { justify-content: flex-start; width: auto; max-width: 150px; }
+            .item-card { width: 80px; padding: 8px; }
+            .item-icon { font-size: 2.5rem; }
+            header h1 { font-size: 1.8rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="feedback-banner"></div>
+
+    <header>
+        <h1>🔎 Detektif Pemilah Sampah</h1>
+        <p>Pilahlah sampah sebelum waktu habis!</p>
+        <button id="btn-mute" onclick="toggleMute()" title="Nyalakan/Matikan Suara">🔊</button>
+    </header>
+
+    <section id="hud">
+        <div class="hud-card time-text" id="time-card">⏳ Waktu: <span id="timer">40</span>s</div>
+        <div class="hud-card target-text">🎯 Target: <span id="target">0</span>/6</div>
+        <div class="hud-card score-text">⭐ Skor: <span id="score">0</span></div>
+        <div class="hud-card highscore-text">🏆 Rekor: <span id="highscore">0</span></div>
+    </section>
+
+    <main>
+        <div id="item-pool"></div>
+        <div id="drop-zones">
+            <div class="drop-zone organik" data-category="organik">
+                <div class="bin-icon">🟢</div>
+                <div class="bin-info">
+                    <div class="bin-title">Organik</div>
+                    <div class="bin-desc">Bisa terurai secara alami</div>
+                </div>
+                <div class="bin-items"></div>
+            </div>
+            <div class="drop-zone anorganik" data-category="anorganik">
+                <div class="bin-icon">🔵</div>
+                <div class="bin-info">
+                    <div class="bin-title">Anorganik</div>
+                    <div class="bin-desc">Sulit terurai & bisa didaur ulang</div>
+                </div>
+                <div class="bin-items"></div>
+            </div>
+            <div class="drop-zone b3" data-category="b3">
+                <div class="bin-icon">🔴</div>
+                <div class="bin-info">
+                    <div class="bin-title">B3</div>
+                    <div class="bin-desc">Berbahaya & butuh penanganan</div>
+                </div>
+                <div class="bin-items"></div>
+            </div>
+        </div>
+    </main>
+
+    <!-- START MODAL -->
+    <div id="start-modal" class="overlay-modal active">
+        <div class="modal-content">
+            <h2 class="modal-title" style="color: var(--primary);">Halo Detektif! 👋</h2>
+            <p class="modal-desc">Bumi butuh bantuanmu! Pilah 6 sampah ke tempat yang tepat sebelum waktumu habis (40 detik).</p>
+            <ul style="text-align: left; margin-bottom: 20px; color: #555; padding-left: 20px;">
+                <li>Jawaban benar: <b>+100 Poin</b></li>
+                <li>Jawaban salah: <b>-20 Poin</b></li>
+                <li>Sisa waktu = <b>Bonus Poin!</b></li>
+            </ul>
+            <button class="btn" onclick="startGame()">▶️ MULAI MAIN</button>
+        </div>
+    </div>
+
+    <!-- GAME OVER / WIN MODAL -->
+    <div id="result-modal" class="overlay-modal">
+        <div id="confetti-container"></div>
+        <div class="modal-content">
+            <h2 class="modal-title" id="result-title">Misi Selesai!</h2>
+            <p class="modal-desc" id="result-msg">Kamu berhasil memilah semua sampah.</p>
+            
+            <div class="score-board">
+                <div class="score-row"><span>Skor Memilah:</span> <b id="res-base-score">0</b></div>
+                <div class="score-row"><span>Bonus Waktu:</span> <b id="res-time-bonus">0</b></div>
+                <div class="score-row score-total"><span>Total Skor:</span> <b id="res-total">0</b></div>
+                <div class="new-record" id="new-record-badge">🎉 REKOR BARU! 🎉</div>
+            </div>
+            
+            <button class="btn" onclick="startGame()">🔄 MAIN LAGI</button>
+        </div>
+    </div>
+
+    <script>
+        /* =========================================
+           AUDIO ENGINE (WEB AUDIO API) - TANPA FILE MP3
+           ========================================= */
+        let audioCtx;
+        let isMuted = false;
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+        }
+
+        function playTone(freq, type, duration, vol=0.1) {
+            if (isMuted || !audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            
+            gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+            
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + duration);
+        }
+
+        function sfxCorrect() {
+            playTone(600, 'sine', 0.1, 0.1);
+            setTimeout(() => playTone(800, 'sine', 0.15, 0.1), 100);
+        }
+
+        function sfxWrong() {
+            playTone(200, 'sawtooth', 0.3, 0.2);
+            setTimeout(() => playTone(150, 'sawtooth', 0.3, 0.2), 150);
+        }
+
+        function sfxDrop() { playTone(400, 'triangle', 0.1, 0.1); }
+        
+        function sfxWin() {
+            const notes = [300, 400, 500, 600, 800, 1000];
+            notes.forEach((f, i) => setTimeout(() => playTone(f, 'square', 0.1, 0.1), i * 80));
+        }
+
+        function sfxLose() {
+            const notes = [300, 250, 200, 150];
+            notes.forEach((f, i) => setTimeout(() => playTone(f, 'sawtooth', 0.3, 0.2), i * 300));
+        }
+
+        function sfxTick() { playTone(800, 'square', 0.05, 0.02); }
+
+        function toggleMute() {
+            isMuted = !isMuted;
+            document.getElementById('btn-mute').innerText = isMuted ? '🔇' : '🔊';
+        }
+
+        /* =========================================
+           LOGIKA GAME UTAMA
+           ========================================= */
+        const itemDatabase = [
+            { id: 1, name: "Kulit Pisang", icon: "🍌", category: "organik", exp: "Sangat mudah terurai jadi pupuk kompos." },
+            { id: 2, name: "Daun Kering", icon: "🍂", category: "organik", exp: "Berasal dari alam dan langsung menyatu dengan tanah." },
+            { id: 3, name: "Sisa Nasi", icon: "🍚", category: "organik", exp: "Sisa makanan ini disukai cacing tanah untuk kompos." },
+            { id: 4, name: "Tulang Ikan", icon: "🐟", category: "organik", exp: "Bahan organik yang akan hancur perlahan di alam." },
+            { id: 5, name: "Botol Plastik", icon: "🥤", category: "anorganik", exp: "Butuh 400 tahun untuk hancur! Harus didaur ulang." },
+            { id: 6, name: "Kaleng Minum", icon: "🥫", category: "anorganik", exp: "Bisa dilebur kembali menjadi kaleng baru." },
+            { id: 7, name: "Kardus Bekas", icon: "📦", category: "anorganik", exp: "Dapat dilebur menjadi bubur kertas untuk barang baru." },
+            { id: 8, name: "Kantong Kresek", icon: "🛍️", category: "anorganik", exp: "Membahayakan hewan laut, harus dikurangi & didaur ulang." },
+            { id: 9, name: "Baterai Bekas", icon: "🔋", category: "b3", exp: "Isinya bahan kimia beracun yang merusak air tanah." },
+            { id: 10, name: "Lampu Neon", icon: "💡", category: "b3", exp: "Mengandung gas merkuri yang sangat berbahaya jika pecah." },
+            { id: 11, name: "Kaleng Cat", icon: "🪣", category: "b3", exp: "Sisa kimianya beracun, tidak boleh dibuang ke selokan." },
+            { id: 12, name: "Obat Expired", icon: "💊", category: "b3", exp: "Bisa meracuni lingkungan atau disalahgunakan." }
+        ];
+
+        let score = 0;
+        let sortedCount = 0;
+        let timeLeft = 40;
+        let timerInterval;
+        let isGameOver = false;
+        let highScore = 0;
+
+        // Ambil HighScore dari Local Storage
+        try {
+            highScore = parseInt(localStorage.getItem('detektif_highscore')) || 0;
+            document.getElementById('highscore').innerText = highScore;
+        } catch(e) {}
+
+        const itemPoolEl = document.getElementById('item-pool');
+        const feedbackBanner = document.getElementById('feedback-banner');
+        let bannerTimeout;
+
+        function startGame() {
+            initAudio();
+            document.getElementById('start-modal').classList.remove('active');
+            document.getElementById('result-modal').classList.remove('active');
+            
+            score = 0;
+            sortedCount = 0;
+            timeLeft = 40;
+            isGameOver = false;
+            
+            document.getElementById('time-card').classList.remove('urgent');
+            document.getElementById('score').innerText = score;
+            document.getElementById('target').innerText = sortedCount;
+            document.getElementById('timer').innerText = timeLeft;
+            
+            itemPoolEl.innerHTML = '';
+            document.querySelectorAll('.bin-items').forEach(bin => bin.innerHTML = '');
+
+            // Acak dan pilih 6 sampah (2 per kategori)
+            const orgs = shuffle(itemDatabase.filter(i => i.category === 'organik')).slice(0, 2);
+            const anorgs = shuffle(itemDatabase.filter(i => i.category === 'anorganik')).slice(0, 2);
+            const b3s = shuffle(itemDatabase.filter(i => i.category === 'b3')).slice(0, 2);
+            const items = shuffle([...orgs, ...anorgs, ...b3s]);
+
+            items.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'item-card';
+                card.dataset.category = item.category;
+                card.dataset.name = item.name;
+                card.dataset.exp = item.exp;
+                card.innerHTML = `<div class="item-icon">${item.icon}</div><div class="item-name">${item.name}</div>`;
+                itemPoolEl.appendChild(card);
+            });
+
+            setupDragAndDrop();
+            
+            clearInterval(timerInterval);
+            timerInterval = setInterval(updateTimer, 1000);
+        }
+
+        function updateTimer() {
+            if(isGameOver) return;
+            timeLeft--;
+            document.getElementById('timer').innerText = timeLeft;
+
+            if(timeLeft <= 10 && timeLeft > 0) {
+                document.getElementById('time-card').classList.add('urgent');
+                sfxTick();
+            }
+
+            if(timeLeft <= 0) {
+                endGame(false);
+            }
+        }
+
+        function showBanner(message, type, duration = 3000) {
+            clearTimeout(bannerTimeout);
+            feedbackBanner.innerHTML = message;
+            feedbackBanner.className = `show bg-${type}`;
+            bannerTimeout = setTimeout(() => feedbackBanner.classList.remove('show'), duration);
+        }
+
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        function setupDragAndDrop() {
+            let activeEl = null, ghostEl = null, offsetX = 0, offsetY = 0;
+            const dropZones = document.querySelectorAll('.drop-zone');
+
+            document.querySelectorAll('.item-card').forEach(item => {
+                item.addEventListener('pointerdown', function(e) {
+                    if(isGameOver || (e.button !== 0 && e.pointerType === 'mouse')) return;
+                    activeEl = this;
+                    sfxDrop();
+                    
+                    ghostEl = activeEl.cloneNode(true);
+                    const rect = activeEl.getBoundingClientRect();
+                    offsetX = e.clientX - rect.left;
+                    offsetY = e.clientY - rect.top;
+
+                    ghostEl.style.position = 'fixed';
+                    ghostEl.style.left = rect.left + 'px';
+                    ghostEl.style.top = rect.top + 'px';
+                    ghostEl.style.width = rect.width + 'px';
+                    ghostEl.style.zIndex = 9000;
+                    ghostEl.style.pointerEvents = 'none';
+                    ghostEl.style.boxShadow = '0 15px 25px rgba(0,0,0,0.2)';
+                    
+                    document.body.appendChild(ghostEl);
+                    activeEl.style.opacity = '0.1';
+
+                    document.addEventListener('pointermove', onPointerMove, { passive: false });
+                    document.addEventListener('pointerup', onPointerUp);
+                });
+            });
+
+            function onPointerMove(e) {
+                if (!ghostEl) return;
+                e.preventDefault();
+                ghostEl.style.left = (e.clientX - offsetX) + 'px';
+                ghostEl.style.top = (e.clientY - offsetY) + 'px';
+
+                dropZones.forEach(z => z.classList.remove('drag-over'));
+                ghostEl.style.display = 'none';
+                const elemBelow = document.elementFromPoint(e.clientX, e.clientY);
+                ghostEl.style.display = 'flex';
+
+                if (elemBelow && elemBelow.closest('.drop-zone')) {
+                    elemBelow.closest('.drop-zone').classList.add('drag-over');
+                }
+            }
+
+            function onPointerUp(e) {
+                if (!ghostEl || !activeEl) return;
+                document.removeEventListener('pointermove', onPointerMove);
+                document.removeEventListener('pointerup', onPointerUp);
+
+                ghostEl.style.display = 'none';
+                const elemBelow = document.elementFromPoint(e.clientX, e.clientY);
+                const dropZone = elemBelow ? elemBelow.closest('.drop-zone') : null;
+                
+                dropZones.forEach(z => z.classList.remove('drag-over'));
+                ghostEl.remove(); ghostEl = null;
+
+                if (dropZone) validateDrop(activeEl, dropZone);
+                else activeEl.style.opacity = '1';
+                activeEl = null;
+            }
+        }
+
+        function validateDrop(itemEl, dropZoneEl) {
+            const isCorrect = itemEl.dataset.category === dropZoneEl.dataset.category;
+            
+            if (isCorrect) {
+                score += 100;
+                sortedCount++;
+                sfxCorrect();
+                
+                itemEl.style.opacity = '1';
+                itemEl.style.position = 'static';
+                const sortedItem = itemEl.cloneNode(true);
+                dropZoneEl.querySelector('.bin-items').appendChild(sortedItem);
+                itemEl.remove();
+
+                // Pesan edukasi tampil 4 detik (lebih lama)
+                showBanner(`🎉 <b>Benar!</b><br><small>${itemEl.dataset.exp}</small>`, 'success', 4000);
+
+                if (sortedCount === 6) setTimeout(() => endGame(true), 500);
+            } else {
+                score = Math.max(0, score - 20);
+                sfxWrong();
+                itemEl.style.opacity = '1';
+                itemEl.classList.add('shake');
+                setTimeout(() => itemEl.classList.remove('shake'), 400);
+
+                const correctCat = itemEl.dataset.category.toUpperCase();
+                showBanner(`💡 <b>Kurang Tepat!</b> ${itemEl.dataset.name} adalah sampah <b>${correctCat}</b>.`, 'error', 3000);
+            }
+            
+            document.getElementById('score').innerText = score;
+            document.getElementById('target').innerText = sortedCount;
+        }
+
+        function endGame(isWin) {
+            isGameOver = true;
+            clearInterval(timerInterval);
+            document.getElementById('time-card').classList.remove('urgent');
+
+            const resultModal = document.getElementById('result-modal');
+            const title = document.getElementById('result-title');
+            const msg = document.getElementById('result-msg');
+            const timeBonus = isWin ? (timeLeft * 10) : 0;
+            const totalScore = score + timeBonus;
+
+            document.getElementById('res-base-score').innerText = score;
+            document.getElementById('res-time-bonus').innerText = timeBonus;
+            document.getElementById('res-total').innerText = totalScore;
+            
+            const badge = document.getElementById('new-record-badge');
+            badge.style.display = 'none';
+
+            if (isWin) {
+                sfxWin();
+                title.innerText = "🏆 Misi Selesai!";
+                title.style.color = "var(--org-color)";
+                msg.innerText = "Luar biasa Detektif! Bumi berterima kasih padamu.";
+                fireConfetti();
+                
+                if (totalScore > highScore) {
+                    highScore = totalScore;
+                    try { localStorage.setItem('detektif_highscore', highScore); } catch(e){}
+                    document.getElementById('highscore').innerText = highScore;
+                    badge.style.display = 'block';
+                }
+            } else {
+                sfxLose();
+                title.innerText = "⏳ Waktu Habis!";
+                title.style.color = "var(--b3-color)";
+                msg.innerText = `Kamu hanya sempat memilah ${sortedCount}/6 sampah. Jangan menyerah!`;
+                document.getElementById('confetti-container').innerHTML = '';
+            }
+
+            resultModal.classList.add('active');
+        }
+
+        function fireConfetti() {
+            const container = document.getElementById('confetti-container');
+            container.innerHTML = '';
+            const colors = ['#f2d74e', '#95c3de', '#ff9a91', '#4CAF50', '#2196F3'];
+            for (let i = 0; i < 70; i++) {
+                const conf = document.createElement('div');
+                conf.classList.add('confetti');
+                const startX = Math.random() * window.innerWidth;
+                const endX = startX + (Math.random() * 300 - 150);
+                const duration = Math.random() * 2 + 2;
+                
+                conf.style.left = startX + 'px';
+                conf.style.top = '-10px';
+                conf.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                
+                conf.animate([
+                    { transform: `translate3d(0, 0, 0) rotateX(0) rotateY(0)`, opacity: 1 },
+                    { transform: `translate3d(${endX - startX}px, ${window.innerHeight}px, 0) rotateX(720deg) rotateY(360deg)`, opacity: 0 }
+                ], { duration: duration * 1000, delay: Math.random() * 0.5 * 1000, fill: 'forwards' });
+                container.appendChild(conf);
+            }
+        }
+    </script>
+</body>
+</html>
