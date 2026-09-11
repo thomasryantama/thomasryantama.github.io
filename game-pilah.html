@@ -271,7 +271,7 @@
             <div class="leaderboard">
                 <h3>🏆 Top 5 Detektif Terbaik</h3>
                 <ul class="leaderboard-list" id="start-leaderboard-list">
-                    <li>Belum ada data. Jadilah yang pertama!</li>
+                    <li>Memuat data dari server...</li>
                 </ul>
             </div>
 
@@ -304,6 +304,59 @@
     </div>
 
     <script>
+        /* =========================================
+           API LEADERBOARD CONFIGURATION
+           ========================================= */
+        const API_URL = "https://script.google.com/macros/s/AKfycbyjhNYtkXTyQr76e7D0PaJdv_1tq6GJYl7UmOlL-3vAQgyT5gkOE-RK4C1FzXdQ58oC5w/exec";
+        const GAME_ID = "pilah";
+        let leaderboard = [];
+
+        // Load Papan Peringkat dari Google Sheets
+        window.onload = () => {
+            loadLeaderboard();
+        };
+
+        function loadLeaderboard() {
+            fetch(API_URL + "?action=get&game=" + GAME_ID)
+                .then(response => response.json())
+                .then(data => {
+                    leaderboard = data;
+                    renderLeaderboard('start-leaderboard-list');
+                })
+                .catch(error => {
+                    console.log("Gagal memuat papan peringkat", error);
+                    document.getElementById('start-leaderboard-list').innerHTML = "<li>Gagal memuat data peringkat.</li>";
+                });
+        }
+
+        function saveScore(name, finalScore) {
+            // Update lokal agar cepat tampil di layar pemain
+            leaderboard.push({ name: name, score: finalScore });
+            leaderboard.sort((a, b) => b.score - a.score);
+            leaderboard = leaderboard.slice(0, 5);
+            renderLeaderboard('result-leaderboard-list');
+
+            // Simpan ke Google Sheets di background
+            const url = `${API_URL}?action=save&game=${GAME_ID}&name=${encodeURIComponent(name)}&score=${finalScore}`;
+            fetch(url).catch(err => console.log("Gagal menyimpan ke cloud", err));
+        }
+
+        function renderLeaderboard(containerId) {
+            const list = document.getElementById(containerId);
+            if (!list) return;
+            list.innerHTML = "";
+            if (leaderboard.length === 0) {
+                list.innerHTML = "<li>Belum ada data. Jadilah yang pertama!</li>";
+                return;
+            }
+            const medals = ['🥇', '🥈', '🥉', '4️⃣', '5️⃣'];
+            leaderboard.forEach((p, i) => {
+                let li = document.createElement('li');
+                li.innerHTML = `<span>${medals[i]} ${p.name}</span> <span>⭐ ${p.score}</span>`;
+                list.appendChild(li);
+            });
+        }
+
         /* =========================================
            AUDIO ENGINE (WEB AUDIO API)
            ========================================= */
@@ -403,56 +456,15 @@
         let timerInterval;
         let isGameOver = false;
         let playerName = "";
-        let leaderboard = [];
 
         const itemPoolEl = document.getElementById('item-pool');
         const feedbackBanner = document.getElementById('feedback-banner');
         let bannerTimeout;
 
-        // Load Papan Peringkat
-        window.onload = () => {
-            loadLeaderboard();
-            renderLeaderboard('start-leaderboard-list');
-        };
-
-        function loadLeaderboard() {
-            try {
-                let data = localStorage.getItem('detektif_leaderboard_v3');
-                if (data) leaderboard = JSON.parse(data);
-            } catch (e) {}
-        }
-
-        function saveScore(name, finalScore) {
-            let existing = leaderboard.find(p => p.name.toLowerCase() === name.toLowerCase());
-            if (existing) {
-                if (finalScore > existing.score) existing.score = finalScore;
-            } else {
-                leaderboard.push({ name: name, score: finalScore });
-            }
-            leaderboard.sort((a, b) => b.score - a.score);
-            leaderboard = leaderboard.slice(0, 5);
-            localStorage.setItem('detektif_leaderboard_v3', JSON.stringify(leaderboard));
-        }
-
-        function renderLeaderboard(containerId) {
-            const list = document.getElementById(containerId);
-            list.innerHTML = "";
-            if (leaderboard.length === 0) {
-                list.innerHTML = "<li>Belum ada data. Jadilah yang pertama!</li>";
-                return;
-            }
-            const medals = ['🥇', '🥈', '🥉', '4️⃣', '5️⃣'];
-            leaderboard.forEach((p, i) => {
-                let li = document.createElement('li');
-                li.innerHTML = `<span>${medals[i]} ${p.name}</span> <span>⭐ ${p.score}</span>`;
-                list.appendChild(li);
-            });
-        }
-
         function showStartScreen() {
             document.getElementById('result-modal').classList.remove('active');
             document.getElementById('start-modal').classList.add('active');
-            renderLeaderboard('start-leaderboard-list');
+            loadLeaderboard();
         }
 
         function showBanner(message, type, duration = 3000) {
@@ -676,7 +688,6 @@
                     document.getElementById('res-accumulated').innerText = `SKOR AKHIR: ⭐ ${totalAccumulatedScore}`;
                     
                     saveScore(playerName, totalAccumulatedScore);
-                    renderLeaderboard('result-leaderboard-list');
                     leaderboardContainer.style.display = 'block';
                     fireConfetti();
 
@@ -694,7 +705,6 @@
                 document.getElementById('res-accumulated').innerText = `SKOR AKHIR: ⭐ ${totalAccumulatedScore}`;
                 
                 saveScore(playerName, totalAccumulatedScore);
-                renderLeaderboard('result-leaderboard-list');
                 leaderboardContainer.style.display = 'block';
 
                 btnContainer.innerHTML = `
