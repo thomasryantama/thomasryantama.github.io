@@ -20,7 +20,7 @@
   <!-- WADAH UTAMA -->
   <div id="main-container" class="flex-grow flex items-center justify-center p-4 w-full max-w-4xl mx-auto mt-4 transition-all duration-300">
     
-    <!-- 1. LOGIN SISWA HYBRID -->
+    <!-- 1. LOGIN SISWA MENGGUNAKAN NIS -->
     <div id="login-screen" class="glass-panel p-8 md:p-10 rounded-[2rem] shadow-2xl max-w-md w-full border-4 border-white">
       <div class="text-center mb-6">
         <img src="https://iili.io/n9uoPtf.png" alt="Logo" class="w-24 h-24 mx-auto object-contain mb-3 drop-shadow-md">
@@ -35,23 +35,10 @@
         </div>
         
         <div>
-          <label class="block text-xs font-bold text-blue-800 ml-2 mb-1 uppercase tracking-wide">Nama Lengkap</label>
-          <input type="text" id="input-nama" placeholder="Ketik nama lengkap sesuai daftar..." autocomplete="off" class="w-full px-5 py-4 border-2 rounded-2xl focus:border-blue-500 outline-none font-bold text-lg bg-white/80 shadow-inner">
+          <label class="block text-xs font-bold text-blue-800 ml-2 mb-1 uppercase tracking-wide">Nomor Induk Siswa (NIS)</label>
+          <input type="text" id="input-nis" placeholder="Contoh: 1024" autocomplete="off" class="w-full px-5 py-4 border-2 rounded-2xl focus:border-blue-500 outline-none font-bold text-lg bg-white/80 shadow-inner">
         </div>
 
-        <div>
-          <label class="block text-xs font-bold text-blue-800 ml-2 mb-1 uppercase tracking-wide">Pilih Kelas</label>
-          <select id="input-kelas" class="w-full px-5 py-4 border-2 rounded-2xl focus:border-blue-500 outline-none font-bold text-lg bg-white/80 shadow-inner">
-            <option value="" disabled selected>Pilih Kelasmu...</option>
-            <option value="1A">Kelas 1A</option><option value="1B">Kelas 1B</option><option value="1C">Kelas 1C</option>
-            <option value="2A">Kelas 2A</option><option value="2B">Kelas 2B</option><option value="2C">Kelas 2C</option>
-            <option value="3A">Kelas 3A</option><option value="3B">Kelas 3B</option><option value="3C">Kelas 3C</option>
-            <option value="4A">Kelas 4A</option><option value="4B">Kelas 4B</option><option value="4C">Kelas 4C</option>
-            <option value="5A">Kelas 5A</option><option value="5B">Kelas 5B</option><option value="5C">Kelas 5C</option>
-            <option value="6A">Kelas 6A</option><option value="6B">Kelas 6B</option><option value="6C">Kelas 6C</option>
-          </select>
-        </div>
-        
         <div>
           <label class="block text-xs font-bold text-blue-800 ml-2 mb-1 uppercase tracking-wide">Token Ujian</label>
           <input type="text" id="input-token" placeholder="CONTOH: MTK-KLS4" autocomplete="off" class="w-full px-5 py-4 border-2 rounded-2xl outline-none text-center font-mono font-black uppercase tracking-widest text-2xl bg-slate-50 shadow-inner text-blue-700 placeholder:text-slate-300">
@@ -63,14 +50,19 @@
 
     <!-- 1.5. RULES SCREEN -->
     <div id="rules-screen" class="hidden glass-panel p-8 md:p-10 rounded-[2rem] shadow-2xl max-w-lg w-full">
-      <h2 class="text-3xl font-black text-center mb-2 text-blue-900">Tata Tertib</h2>
+      <h2 class="text-3xl font-black text-center mb-2 text-blue-900">Konfirmasi Siswa</h2>
+      <div class="bg-blue-50 border-2 border-blue-200 rounded-2xl p-4 text-center mb-6">
+        <p class="text-xs font-bold text-slate-400 uppercase">Nama Peserta</p>
+        <p id="disp-nama-konfirmasi" class="text-xl font-extrabold text-blue-900 mb-1"></p>
+        <span id="disp-kelas-konfirmasi" class="text-xs font-black bg-blue-200 text-blue-800 px-3 py-1 rounded-full"></span>
+      </div>
       <p id="info-mapel-disp" class="text-center font-bold text-orange-500 mb-6 bg-orange-50 py-2 rounded-lg"></p>
       
       <div class="bg-white p-5 rounded-2xl border-2 border-slate-100 space-y-3 text-sm text-slate-700 mb-6 font-semibold">
-        <ul class="list-disc pl-5 space-y-3">
-          <li>Wajib mengikuti arahan pengawas selama ujian.</li>
-          <li><strong>Sistem Anti-Curang:</strong> Ujian akan otomatis terkumpul jika kamu terdeteksi membuka tab/aplikasi lain.</li>
-          <li>Kerjakan soal dengan teliti, mandiri, dan jujur.</li>
+        <ul class="list-disc pl-5 space-y-2">
+          <li>Pastikan nama di atas benar merupakan data diri Anda[cite: 1].</li>
+          <li><strong>Sistem Anti-Curang:</strong> Ujian akan otomatis terkumpul jika Anda keluar tab atau aplikasi[cite: 1].</li>
+          <li>Kerjakan soal dengan teliti, mandiri, dan jujur[cite: 1].</li>
         </ul>
       </div>
       <div class="flex items-center gap-3 mb-6 bg-blue-50 p-4 rounded-xl border-2 border-blue-200 cursor-pointer" onclick="document.getElementById('check-setuju').click()">
@@ -130,18 +122,16 @@
         <button onclick="location.reload()" class="bg-red-100 text-red-600 px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-red-200 transition">Tutup Dashboard</button>
       </div>
 
-      <!-- TABS -->
       <div class="flex gap-6 border-b-2 border-slate-200 mb-6 overflow-x-auto pb-1">
         <button onclick="switchTab('rekap')" id="tab-nav-rekap" class="pb-3 font-black text-blue-600 border-b-4 border-blue-600 whitespace-nowrap">Data Nilai Siswa</button>
         <button onclick="switchTab('analisis-soal')" id="tab-nav-soal" class="pb-3 font-bold text-slate-400 whitespace-nowrap">Analisis Butir Soal</button>
         <button onclick="switchTab('analisis-siswa')" id="tab-nav-siswa" class="pb-3 font-bold text-slate-400 whitespace-nowrap">Cek Jawaban Siswa</button>
       </div>
 
-      <!-- VIEW: REKAP NILAI -->
       <div id="view-rekap">
         <div class="bg-blue-50 p-5 rounded-2xl border-2 border-blue-100 mb-6 flex flex-col md:flex-row gap-4 items-center justify-between">
           <div class="text-sm font-semibold text-blue-800">
-             Silakan unduh rekap nilai ini dalam format Excel. Data sudah disaring khusus untuk kelas Anda.
+             Data disaring khusus untuk kelas Anda.
           </div>
           <div class="flex gap-3 w-full md:w-auto">
             <button onclick="hitungUlangSemua()" id="btn-recalc" class="hidden flex-1 md:flex-none bg-amber-500 hover:bg-amber-600 text-white px-5 py-3 rounded-xl font-bold text-sm shadow-md transition">♻️ Hitung Ulang (Master)</button>
@@ -156,7 +146,6 @@
         </div>
       </div>
 
-      <!-- VIEW: ANALISIS SOAL -->
       <div id="view-analisis-soal" class="hidden">
         <div id="filter-kelas-container" class="hidden flex gap-4 mb-6 items-center bg-slate-50 p-4 rounded-xl border">
           <label class="font-black text-sm text-slate-700">Filter Analisis (Master):</label>
@@ -173,7 +162,6 @@
         </div>
       </div>
 
-      <!-- VIEW: ANALISIS SISWA -->
       <div id="view-analisis-siswa" class="hidden">
         <div class="flex gap-4 mb-6 items-center bg-slate-50 p-4 rounded-xl border">
           <label class="font-black text-sm text-slate-700">Cek Siswa:</label>
@@ -195,7 +183,6 @@
   </footer>
 
   <script>
-    // URL Web App Google Apps Script
     const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwOfvdH0vq5IpZjpOcWBVmUWF2G5KiP4HrosMdeyXhzO9h4AI49bBvzc7HTgy5g1vth/exec"; 
 
     function escapeHtml(text) {
@@ -238,17 +225,17 @@
     function setMode(simulasi) {
       isSimulasiMode = simulasi;
       const tInput = document.getElementById("input-token");
-      const cInput = document.getElementById("input-kelas");
+      const nInput = document.getElementById("input-nis");
       if(simulasi) {
         document.getElementById("tab-simulasi").className = "flex-1 py-2 text-xs font-bold rounded-lg bg-amber-500 text-white transition";
         document.getElementById("tab-ujian").className = "flex-1 py-2 text-xs font-bold rounded-lg text-slate-500 transition";
         tInput.value = "SIMULASI"; tInput.disabled = true;
-        cInput.value = "4A"; cInput.disabled = true;
+        nInput.value = "SIMULASI"; nInput.disabled = true;
       } else {
         document.getElementById("tab-ujian").className = "flex-1 py-2 text-xs font-bold rounded-lg bg-blue-600 text-white transition";
         document.getElementById("tab-simulasi").className = "flex-1 py-2 text-xs font-bold rounded-lg text-slate-500 transition";
         tInput.value = ""; tInput.disabled = false;
-        cInput.value = ""; cInput.disabled = false;
+        nInput.value = ""; nInput.disabled = false;
       }
     }
 
@@ -289,28 +276,30 @@
     }
 
     async function handleLoginValidasi() {
-      const nama = document.getElementById("input-nama").value.trim();
+      const nis = document.getElementById("input-nis").value.trim();
       const token = document.getElementById("input-token").value.trim();
-      const kelasPilih = document.getElementById("input-kelas").value;
       
-      if (!nama || !token || !kelasPilih) { 
-        alert("Harap isi Nama Lengkap, pilih Kelas, dan masukkan Token Ujian!"); 
+      if (!nis || !token) { 
+        alert("Harap isi NIS dan masukkan Token Ujian!"); 
         return; 
       }
       
       const btn = document.getElementById("btn-start");
-      btn.innerText = "Memeriksa Administrasi & Token..."; 
+      btn.innerText = "Memeriksa NIS & Token..."; 
       btn.disabled = true;
       
       try {
-        const res = await api({ action: "LOGIN_SISWA", nama, token, kelasPilihan: kelasPilih, isSimulasi: isSimulasiMode });
+        const res = await api({ action: "LOGIN_SISWA", nis, token, isSimulasi: isSimulasiMode });
         
         if (res.status === "success") {
           cacheResData = res; 
-          info = { nama: nama, kelas: res.kelas, mapel: res.mapel, isSimulasi: isSimulasiMode }; 
-          sKey = `U_${token}_${nama}`;
+          info = { nama: res.nama, kelas: res.kelas, mapel: res.mapel, isSimulasi: isSimulasiMode }; 
+          sKey = `U_${token}_${nis}`;
           
-          document.getElementById("info-mapel-disp").innerText = `${res.mapel} - Kelas ${res.kelas} (${res.waktu} Menit)`;
+          document.getElementById("disp-nama-konfirmasi").innerText = res.nama;
+          document.getElementById("disp-kelas-konfirmasi").innerText = `Kelas ${res.kelas}`;
+          document.getElementById("info-mapel-disp").innerText = `${res.mapel} (${res.waktu} Menit)`;
+          
           document.getElementById("login-screen").classList.add("hidden"); 
           document.getElementById("rules-screen").classList.remove("hidden");
         } else { 
@@ -319,7 +308,7 @@
           btn.disabled = false; 
         }
       } catch (e) { 
-        alert("Kesalahan jaringan atau server. Pastikan koneksi lancar."); 
+        alert("Kesalahan koneksi jaringan. Silakan coba kembali."); 
         btn.innerText = "MASUK UJIAN ▶"; 
         btn.disabled = false; 
       }
@@ -374,7 +363,6 @@
       localStorage.setItem(sKey, JSON.stringify(answers)); 
     }
 
-    // RENDER SOAL (Mendukung Opsi Gambar & Teks)
     function renderQ() {
       document.getElementById("q-list").innerHTML = examData.map((q, i) => {
         let input = "", ans = answers[q.id] !== undefined ? String(answers[q.id]) : "";
@@ -432,7 +420,6 @@
       }
     }
 
-    // --- LOGIKA MULTI-ROLE ADMIN ---
     async function loginAdmin() {
       tempPass = document.getElementById("admin-pass").value;
       const btnAdmin = document.getElementById("btn-admin-login");
