@@ -327,26 +327,35 @@
 
     // FIX 2: Radio button menggunakan String murni dan this.value untuk menghindari kedip
     function renderQ() {
-      document.getElementById("q-list").innerHTML = examData.map((q, i) => {
-        let input = "", ans = answers[q.id] !== undefined ? String(answers[q.id]) : "";
-        if (q.tipe === "PG") {
-          input = `<div class="mt-4 space-y-3">` + q.opsi.map(op => {
-            let opStr = String(op);
-            let escOp = escapeHtml(opStr);
-            let isChecked = (ans === opStr) ? 'checked' : '';
-            let activeStyle = (ans === opStr) ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200' : 'border-slate-200';
-            
-            return `<label class="flex p-5 border-2 rounded-2xl hover:bg-blue-50 cursor-pointer bg-white font-semibold transition-colors ${activeStyle}">
-              <input type="radio" name="s_${q.id}" value="${escOp}" ${isChecked} onchange="sv(${q.id}, this.value); renderQ();" class="w-6 h-6 mr-4 mt-0.5 accent-blue-600">
-              ${escOp}
-            </label>`;
-          }).join('') + `</div>`;
-        } else {
-          input = `<div class="mt-4"><input type="text" value="${escapeHtml(ans)}" oninput="sv(${q.id}, this.value)" class="w-full p-5 border-2 rounded-2xl bg-white font-semibold focus:border-blue-500 outline-none" placeholder="Ketik jawabanmu di sini..." onpaste="return false;" autocomplete="off"></div>`;
-        }
-        return `<div class="p-6 md:p-8 rounded-[2rem] bg-white border-2 border-slate-100 shadow-sm flex flex-col md:flex-row"><span class="font-black text-blue-200 text-4xl mr-6 mb-4 md:mb-0">${i+1}</span><div class="flex-1"><p class="font-extrabold text-xl text-slate-700 leading-snug">${escapeHtml(q.soal)}</p>${input}</div></div>`;
-      }).join('');
-    }
+   document.getElementById("q-list").innerHTML = examData.map((q, i) => {
+     let input = "", ans = answers[q.id] !== undefined ? String(answers[q.id]) : "";
+     if (q.tipe === "PG") {
+       input = `<div class="mt-4 space-y-3">` + q.opsi.map(op => {
+         let opStr = String(op);
+         let escOp = escapeHtml(opStr);
+         let isChecked = (ans === opStr) ? 'checked' : '';
+         let activeStyle = (ans === opStr) ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200' : 'border-slate-200';
+
+         return `<label class="flex p-5 border-2 rounded-2xl hover:bg-blue-50 cursor-pointer bg-white font-semibold transition-colors ${activeStyle}">
+           <input type="radio" name="s_${q.id}" value="${escOp}" ${isChecked} onchange="sv(${q.id}, this.value); renderQ();" class="w-6 h-6 mr-4 mt-0.5 accent-blue-600">
+           ${escOp}
+         </label>`;
+       }).join('') + `</div>`;
+     } else {
+       input = `<div class="mt-4"><input type="text" value="${escapeHtml(ans)}" oninput="sv(${q.id}, this.value)" class="w-full p-5 border-2 rounded-2xl bg-white font-semibold focus:border-blue-500 outline-none" placeholder="Ketik jawabanmu di sini..." onpaste="return false;" autocomplete="off"></div>`;
+     }
+
+     // Cek apakah guru mengisi URL gambar di Excel (Kolom L)
+     let imgHtml = q.gambar ? `<img src="${escapeHtml(q.gambar)}" class="max-w-full h-auto mb-4 rounded-xl shadow-sm border border-slate-200" alt="Gambar Soal">` : '';
+
+     return `<div class="p-6 md:p-8 rounded-[2rem] bg-white border-2 border-slate-100 shadow-sm flex flex-col md:flex-row"><span class="font-black text-blue-200 text-4xl mr-6 mb-4 md:mb-0">${i+1}</span><div class="flex-1">${imgHtml}<p class="font-extrabold text-xl text-slate-700 leading-snug">${escapeHtml(q.soal)}</p>${input}</div></div>`;
+   }).join('');
+
+   // Panggil MathJax untuk merender ulang rumus setelah pertanyaan digambar di layar
+   if (window.MathJax) {
+       MathJax.typesetPromise();
+   }
+ }
 
     async function handleSubmit() {
       if(!isRunning) return;
@@ -489,5 +498,7 @@
       link.download = `Rekap_Nilai_STS_${adminKelas?adminKelas:'Master'}.xls`; document.body.appendChild(link); link.click(); document.body.removeChild(link);
     }
   </script>
+  <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
 </body>
 </html>
