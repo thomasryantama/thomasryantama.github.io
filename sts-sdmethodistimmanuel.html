@@ -61,7 +61,7 @@
       <div class="bg-white p-5 rounded-2xl border-2 border-slate-100 space-y-3 text-sm text-slate-700 mb-6 font-semibold">
         <ul class="list-disc pl-5 space-y-2">
           <li>Pastikan nama di atas benar merupakan data diri Anda.</li>
-          <li><strong>Sistem Anti-Curang:</strong> Ujian akan otomatis terkumpul jika Anda keluar tab atau aplikasi sebanyak 3 kali.</li>
+          <li><strong>Sistem Anti-Curang:</strong> Dilarang keluar tab, beralih aplikasi, atau mengambil tangkapan layar (screenshot). Ujian otomatis dikumpulkan jika melanggar sebanyak 3 kali.</li>
           <li>Kerjakan soal dengan teliti, mandiri, dan jujur.</li>
         </ul>
       </div>
@@ -74,7 +74,7 @@
 
     <!-- 2. EXAM SCREEN -->
     <div id="exam-screen" class="hidden glass-panel p-6 md:p-10 rounded-3xl shadow-2xl max-w-3xl w-full border-t-8 border-t-blue-600 relative">
-      <div id="cheat-banner" class="hidden absolute top-0 left-0 right-0 bg-red-600 text-white text-center py-1.5 text-xs font-bold rounded-t-xl uppercase animate-pulse">Dilarang Membuka Tab/Aplikasi Lain!</div>
+      <div id="cheat-banner" class="hidden absolute top-0 left-0 right-0 bg-red-600 text-white text-center py-1.5 text-xs font-bold rounded-t-xl uppercase animate-pulse">Dilarang Membuka Tab, Aplikasi Lain, atau Screenshot!</div>
       <div class="flex justify-between items-center border-b-2 border-slate-200 pb-5 mb-6">
         <div>
           <div id="user-disp" class="font-extrabold text-2xl text-slate-800"></div>
@@ -207,6 +207,7 @@
       return m ? m[0] : ""; 
     }
 
+    // --- PENCEGAH DASAR & CLIPBOARD ---
     document.addEventListener('copy', e => e.preventDefault()); 
     document.addEventListener('cut', e => e.preventDefault()); 
     document.addEventListener('paste', e => e.preventDefault()); 
@@ -219,8 +220,57 @@
 
     let examData = [], answers = {}, info = {}, timer = null, timeLeft = 0, cheats = 0, isRunning = false, sKey = "";
     let tempPass = "", globalRekap = [], globalKunci = [], isSimulasiMode = false, cacheResData = null;
-    let maxCheatAllowed = 3; // Standar 3x untuk semua kelas
+    let maxCheatAllowed = 3; 
     let adminRole = "", adminKelas = ""; 
+
+    // --- FUNGSI PENCATAT PELANGGARAN TERPADU ---
+    function catatPelanggaran(alasan) {
+      if (!isRunning || isSimulasiMode) return;
+      cheats++;
+      let toleransi = `${cheats}/${maxCheatAllowed}`;
+      document.getElementById('cheat-disp').innerText = `Pelanggaran: ${toleransi}`;
+      document.getElementById('cheat-banner').classList.remove('hidden');
+
+      if (cheats >= maxCheatAllowed) {
+        alert(`Batas pelanggaran (${maxCheatAllowed}x) tercapai karena: ${alasan}!\nUjian otomatis dikumpulkan.`);
+        handleSubmit();
+      } else {
+        alert(`⚠️ PERINGATAN SISTEM! ⚠️\nTerdeteksi: ${alasan}.\nPelanggaran: ${cheats}/${maxCheatAllowed}`);
+      }
+    }
+
+    // --- 1. DETEKSI SCREENSHOT & CETAK (LAPTOP / PC) ---
+    document.addEventListener('keyup', (e) => {
+      if (e.key === 'PrintScreen') {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(''); // Kosongkan isi clipboard
+        }
+        catatPelanggaran("Mengambil Screenshot (PrintScreen)");
+      }
+    });
+
+    document.addEventListener('keydown', (e) => {
+      // Menangkap pintasan Ctrl+P (Cetak) atau Win/Cmd+Shift+S (Snipping Tool)
+      if ((e.ctrlKey && (e.key === 'p' || e.key === 'P')) || 
+          (e.shiftKey && (e.metaKey || e.key === 'Meta') && (e.key === 's' || e.key === 'S'))) {
+        e.preventDefault();
+        catatPelanggaran("Mencoba Pintasan Cetak / Screenshot");
+      }
+    });
+
+    // --- 2. DETEKSI GESTURE SCREENSHOT & PINDAH TAB/APLIKASI (HP & LAPTOP) ---
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden && isRunning && !isSimulasiMode) {
+        catatPelanggaran("Berpindah tab atau aplikasi lain");
+      }
+    });
+
+    // Menangkap gesture screenshot HP (3 jari / tombol fisik) yang memicu hilangnya fokus jendela
+    window.addEventListener("blur", () => {
+      if (isRunning && !isSimulasiMode) {
+        catatPelanggaran("Layar kehilangan fokus / Gesture Screenshot HP terdeteksi");
+      }
+    });
 
     function setMode(simulasi) {
       isSimulasiMode = simulasi;
@@ -253,22 +303,6 @@
       else if (el.webkitRequestFullscreen) { el.webkitRequestFullscreen().catch(e => {}); }
       else if (el.msRequestFullscreen) { el.msRequestFullscreen().catch(e => {}); }
     }
-
-    document.addEventListener("visibilitychange", () => {
-      if (document.hidden && isRunning && !isSimulasiMode) {
-        cheats++; 
-        let toleransi = `${cheats}/${maxCheatAllowed}`;
-        document.getElementById('cheat-disp').innerText = `Pelanggaran: ${toleransi}`;
-        document.getElementById('cheat-banner').classList.remove('hidden');
-        
-        if (cheats >= maxCheatAllowed) { 
-          alert("Batas pelanggaran tab tercapai! Ujian kamu otomatis dikumpulkan."); 
-          handleSubmit(); 
-        } else {
-          alert(`⚠️ SISTEM ANTI-CURANG! ⚠️\nTerdeteksi pindah layar atau membuka aplikasi lain. Pelanggaran: ${cheats}/${maxCheatAllowed}`);
-        }
-      }
-    });
 
     async function api(payload) { 
       const r = await fetch(WEB_APP_URL, { method: "POST", body: JSON.stringify(payload) }); 
@@ -322,7 +356,6 @@
       
       if(!isSimulasiMode) { goFullScreen(); }
       
-      // Standar 3 kali pelanggaran untuk semua kelas (1 s.d 6)
       maxCheatAllowed = 3; 
       document.getElementById('cheat-disp').innerText = "Pelanggaran: 0/3"; 
 
