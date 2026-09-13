@@ -103,7 +103,18 @@
       <button onclick="location.reload()" class="text-slate-400 font-bold hover:text-blue-600 transition">Ke Halaman Awal</button>
     </div>
 
-    <!-- 4. ADMIN MODAL & DASHBOARD -->
+    <!-- 4. MODAL PERINGATAN PELANGGARAN KHUSUS (PENGGANTI ALERT BROWSER) -->
+    <div id="modal-peringatan" class="hidden fixed inset-0 bg-slate-900/80 backdrop-blur-sm items-center justify-center p-4 z-50 flex">
+      <div class="bg-white p-6 md:p-8 rounded-3xl shadow-2xl max-w-sm w-full border-4 border-amber-500 text-center">
+        <div class="text-5xl mb-3">⚠️</div>
+        <h3 class="text-xl font-black text-amber-600 mb-2">PERINGATAN SISTEM!</h3>
+        <p id="modal-peringatan-alasan" class="text-sm font-semibold text-slate-700 mb-2"></p>
+        <p id="modal-peringatan-count" class="text-xs font-black bg-amber-100 text-amber-800 py-1.5 px-3 rounded-xl mb-6"></p>
+        <button onclick="tutupModalPeringatan()" class="w-full bg-amber-500 hover:bg-amber-600 text-white font-black py-3.5 rounded-xl shadow-lg transition">SAYA PAHAM &amp; KEMBALI UJIAN</button>
+      </div>
+    </div>
+
+    <!-- 5. ADMIN MODAL & DASHBOARD -->
     <div id="admin-modal" class="hidden fixed inset-0 bg-slate-900/80 backdrop-blur-sm items-center justify-center p-4 z-50 flex">
       <div class="bg-white p-8 rounded-3xl shadow-2xl max-w-sm w-full border-4 border-blue-500">
         <div class="text-center text-4xl mb-4">🛡️</div>
@@ -140,7 +151,7 @@
         </div>
         <div class="overflow-x-auto rounded-xl border-2 border-slate-200">
             <table class="w-full text-left text-sm bg-white whitespace-nowrap">
-            <thead class="bg-slate-100 text-slate-600 font-bold uppercase text-xs"><tr><th class="p-4">Waktu Submit</th><th class="p-4">Nama Siswa</th><th class="p-4">Kelas & Mapel</th><th class="p-4">Skor</th><th class="p-4">Anti-Cheat</th></tr></thead>
+            <thead class="bg-slate-100 text-slate-600 font-bold uppercase text-xs"><tr><th class="p-4">Waktu Submit</th><th class="p-4">Nama Siswa</th><th class="p-4">Kelas &amp; Mapel</th><th class="p-4">Skor</th><th class="p-4">Anti-Cheat</th></tr></thead>
             <tbody id="admin-table" class="divide-y divide-slate-100 font-medium"></tbody>
             </table>
         </div>
@@ -179,7 +190,7 @@
   </div>
 
   <footer class="w-full text-center py-4 text-xs font-bold text-slate-500 uppercase absolute bottom-0 bg-white/40 backdrop-blur-sm border-t border-white/40">
-    System Architecture & AI Prompt by <span class="text-blue-700">Thomas Ryantama, M.Kom., Gr.</span>
+    System Architecture &amp; AI Prompt by <span class="text-blue-700">Thomas Ryantama, M.Kom., Gr.</span>
   </footer>
 
   <script>
@@ -214,7 +225,6 @@
     document.addEventListener('keydown', e => { 
       if (e.key === 'F5' || (e.ctrlKey && (e.key === 'r' || e.key === 'R'))) { 
         e.preventDefault(); 
-        alert("Tombol refresh dikunci!"); 
       } 
     });
 
@@ -224,26 +234,43 @@
     let maxCheatAllowed = 3; 
     let adminRole = "", adminKelas = ""; 
 
-    // --- MEKANISME DEBOUNCE ANTI-CHEAT (Mencegah false positive HP) ---
+    // --- MEKANISME DEBOUNCE ANTI-CHEAT TANPA ALERT BROWSER ---
     let lastViolationTime = 0;
+    let isWarningModalOpen = false;
 
     function catatPelanggaran(alasan) {
       const now = Date.now();
-      if (now - lastViolationTime < 1500) return; // Abaikan jika terjadi dalam jeda 1.5 detik
+      
+      // Cegah eksekusi berulang jika modal masih terbuka atau rentang waktu kurang dari 2 detik
+      if (isWarningModalOpen || (now - lastViolationTime < 2000)) return;
       lastViolationTime = now;
 
       if (!isRunning || isSimulasiMode) return;
+      
       cheats++;
       let toleransi = `${cheats}/${maxCheatAllowed}`;
       document.getElementById('cheat-disp').innerText = `Pelanggaran: ${toleransi}`;
       document.getElementById('cheat-banner').classList.remove('hidden');
 
       if (cheats >= maxCheatAllowed) {
-        alert(`Batas pelanggaran (${maxCheatAllowed}x) tercapai karena: ${alasan}!\nUjian otomatis dikumpulkan.`);
+        isRunning = false;
+        document.getElementById('modal-peringatan').classList.add('hidden');
         handleSubmit();
       } else {
-        alert(`⚠️ PERINGATAN SISTEM! ⚠️\nTerdeteksi: ${alasan}.\nPelanggaran: ${cheats}/${maxCheatAllowed}`);
+        isWarningModalOpen = true;
+        document.getElementById('modal-peringatan-alasan').innerText = `Terdeteksi: ${alasan}`;
+        document.getElementById('modal-peringatan-count').innerText = `Status Pelanggaran: ${toleransi}`;
+        document.getElementById('modal-peringatan').classList.remove('hidden');
       }
+    }
+
+    function tutupModalPeringatan() {
+      document.getElementById('modal-peringatan').classList.add('hidden');
+      // Beri jeda 1 detik agar browser stabil sebelum deteksi blur aktif kembali
+      setTimeout(() => {
+        isWarningModalOpen = false;
+        lastViolationTime = Date.now();
+      }, 1000);
     }
 
     // 1. DETEKSI SCREENSHOT & CETAK (LAPTOP / PC)
@@ -332,7 +359,7 @@
         
         if (res.status === "success") {
           cacheResData = res; 
-          serverSessionId = res.sessionId; // Menyimpan ID sesi otoritatif dari server
+          serverSessionId = res.sessionId;
           info = { nama: res.nama, kelas: res.kelas, mapel: res.mapel, isSimulasi: isSimulasiMode }; 
           sKey = `U_${token}_${nis}`;
           
@@ -363,6 +390,9 @@
       if(!isSimulasiMode) { goFullScreen(); }
       
       maxCheatAllowed = 3; 
+      cheats = 0;
+      isWarningModalOpen = false;
+      lastViolationTime = 0;
       document.getElementById('cheat-disp').innerText = "Pelanggaran: 0/3"; 
 
       document.getElementById("rules-screen").classList.add("hidden"); 
@@ -434,7 +464,7 @@
     }
 
     async function handleSubmit() {
-      if(!isRunning) return;
+      if(!isRunning && cheats < maxCheatAllowed && timeLeft > 0) return;
       isRunning = false; 
       clearInterval(timer); 
       document.getElementById("btn-submit").innerText = "MENGIRIM JAWABAN...";
@@ -442,7 +472,6 @@
       if (document.exitFullscreen) { document.exitFullscreen().catch(e=>{}); }
       
       try {
-        // HANYA MENGIRIM SESSION ID DAN JAWABAN KE SERVER
         const res = await api({ 
           action: "SUBMIT_EXAM", 
           sessionId: serverSessionId, 
