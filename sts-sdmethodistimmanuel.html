@@ -60,9 +60,9 @@
       
       <div class="bg-white p-5 rounded-2xl border-2 border-slate-100 space-y-3 text-sm text-slate-700 mb-6 font-semibold">
         <ul class="list-disc pl-5 space-y-2">
-          <li>Pastikan nama di atas benar merupakan data diri Anda.</li>
-          <li><strong>Sistem Anti-Curang:</strong> Dilarang keluar tab, beralih aplikasi, atau mengambil tangkapan layar (screenshot). Ujian otomatis dikumpulkan jika melanggar sebanyak 3 kali.</li>
-          <li>Kerjakan soal dengan teliti, mandiri, dan jujur.</li>
+          <li>Pastikan data diri di atas sudah sesuai.</li>
+          <li><strong>Sistem Anti-Curang:</strong> Dilarang berganti aplikasi, keluar tab, atau mengambil tangkapan layar (*screenshot*).</li>
+          <li>Ujian akan otomatis dikumpulkan jika batas pelanggaran (3 kali) tercapai.</li>
         </ul>
       </div>
       <div class="flex items-center gap-3 mb-6 bg-blue-50 p-4 rounded-xl border-2 border-blue-200 cursor-pointer" onclick="document.getElementById('check-setuju').click()">
@@ -97,7 +97,7 @@
       <div class="w-28 h-28 bg-green-500 text-white rounded-full flex items-center justify-center mx-auto mb-6 text-6xl font-black shadow-[0_0_30px_rgba(34,197,94,0.5)]">✓</div>
       <h2 class="text-3xl font-extrabold mb-2 text-slate-800">Ujian Selesai!</h2>
       <div class="bg-blue-50 border-2 border-blue-200 rounded-2xl p-6 mb-8 mt-6">
-        <p class="text-base font-bold text-blue-900 leading-snug">Jawabanmu sudah berhasil direkam dengan aman.</p>
+        <p class="text-base font-bold text-blue-900 leading-snug">Jawabanmu telah berhasil direkam oleh server dengan aman.</p>
         <p class="text-sm font-semibold text-blue-700 mt-3">Silakan tutup halaman ini dan beristirahat.</p>
       </div>
       <button onclick="location.reload()" class="text-slate-400 font-bold hover:text-blue-600 transition">Ke Halaman Awal</button>
@@ -219,12 +219,19 @@
     });
 
     let examData = [], answers = {}, info = {}, timer = null, timeLeft = 0, cheats = 0, isRunning = false, sKey = "";
+    let serverSessionId = ""; 
     let tempPass = "", globalRekap = [], globalKunci = [], isSimulasiMode = false, cacheResData = null;
     let maxCheatAllowed = 3; 
     let adminRole = "", adminKelas = ""; 
 
-    // --- FUNGSI PENCATAT PELANGGARAN TERPADU ---
+    // --- MEKANISME DEBOUNCE ANTI-CHEAT (Mencegah false positive HP) ---
+    let lastViolationTime = 0;
+
     function catatPelanggaran(alasan) {
+      const now = Date.now();
+      if (now - lastViolationTime < 1500) return; // Abaikan jika terjadi dalam jeda 1.5 detik
+      lastViolationTime = now;
+
       if (!isRunning || isSimulasiMode) return;
       cheats++;
       let toleransi = `${cheats}/${maxCheatAllowed}`;
@@ -239,18 +246,17 @@
       }
     }
 
-    // --- 1. DETEKSI SCREENSHOT & CETAK (LAPTOP / PC) ---
+    // 1. DETEKSI SCREENSHOT & CETAK (LAPTOP / PC)
     document.addEventListener('keyup', (e) => {
       if (e.key === 'PrintScreen') {
         if (navigator.clipboard && navigator.clipboard.writeText) {
-          navigator.clipboard.writeText(''); // Kosongkan isi clipboard
+          navigator.clipboard.writeText('');
         }
         catatPelanggaran("Mengambil Screenshot (PrintScreen)");
       }
     });
 
     document.addEventListener('keydown', (e) => {
-      // Menangkap pintasan Ctrl+P (Cetak) atau Win/Cmd+Shift+S (Snipping Tool)
       if ((e.ctrlKey && (e.key === 'p' || e.key === 'P')) || 
           (e.shiftKey && (e.metaKey || e.key === 'Meta') && (e.key === 's' || e.key === 'S'))) {
         e.preventDefault();
@@ -258,17 +264,16 @@
       }
     });
 
-    // --- 2. DETEKSI GESTURE SCREENSHOT & PINDAH TAB/APLIKASI (HP & LAPTOP) ---
+    // 2. DETEKSI GESTURE SCREENSHOT & PINDAH TAB/APLIKASI (HP & LAPTOP)
     document.addEventListener("visibilitychange", () => {
       if (document.hidden && isRunning && !isSimulasiMode) {
         catatPelanggaran("Berpindah tab atau aplikasi lain");
       }
     });
 
-    // Menangkap gesture screenshot HP (3 jari / tombol fisik) yang memicu hilangnya fokus jendela
     window.addEventListener("blur", () => {
       if (isRunning && !isSimulasiMode) {
-        catatPelanggaran("Layar kehilangan fokus / Gesture Screenshot HP terdeteksi");
+        catatPelanggaran("Layar kehilangan fokus / Membuka menu sistem");
       }
     });
 
@@ -327,6 +332,7 @@
         
         if (res.status === "success") {
           cacheResData = res; 
+          serverSessionId = res.sessionId; // Menyimpan ID sesi otoritatif dari server
           info = { nama: res.nama, kelas: res.kelas, mapel: res.mapel, isSimulasi: isSimulasiMode }; 
           sKey = `U_${token}_${nis}`;
           
@@ -436,11 +442,24 @@
       if (document.exitFullscreen) { document.exitFullscreen().catch(e=>{}); }
       
       try {
-        await api({ action: "SUBMIT_EXAM", ...info, answers, cheatCount: cheats });
-        localStorage.removeItem(sKey);
-        document.getElementById("exam-screen").classList.add("hidden"); 
-        document.getElementById("finish-screen").classList.remove("hidden");
-        document.getElementById("btn-admin-secret").classList.remove("hidden"); 
+        // HANYA MENGIRIM SESSION ID DAN JAWABAN KE SERVER
+        const res = await api({ 
+          action: "SUBMIT_EXAM", 
+          sessionId: serverSessionId, 
+          answers: answers, 
+          cheatCount: cheats 
+        });
+
+        if (res.status === "success") {
+          localStorage.removeItem(sKey);
+          document.getElementById("exam-screen").classList.add("hidden"); 
+          document.getElementById("finish-screen").classList.remove("hidden");
+          document.getElementById("btn-admin-secret").classList.remove("hidden"); 
+        } else {
+          alert("Gagal: " + res.message);
+          isRunning = true;
+          document.getElementById("btn-submit").innerText = "KUMPULKAN";
+        }
       } catch (e) { 
         alert("Gagal mengirim jawaban, periksa jaringan dan klik Kumpulkan lagi!"); 
         isRunning = true; 
@@ -507,11 +526,11 @@
 
     function renderAdminTable() {
       document.getElementById("admin-table").innerHTML = globalRekap.map(r => `<tr>
-        <td class="p-4 text-xs text-slate-500">${r.waktu}</td>
-        <td class="p-4 font-extrabold text-slate-700">${r.nama}</td>
-        <td class="p-4 font-semibold">${r.kelas}</td>
-        <td class="p-4 font-black text-lg text-blue-600">${r.skor}</td>
-        <td class="p-4 text-xs font-bold ${r.status.includes('Aman')?'text-green-500':'text-red-500'}">${r.status}</td>
+        <td class="p-4 text-xs text-slate-500">${escapeHtml(r.waktu)}</td>
+        <td class="p-4 font-extrabold text-slate-700">${escapeHtml(r.nama)}</td>
+        <td class="p-4 font-semibold">${escapeHtml(r.kelas)}</td>
+        <td class="p-4 font-black text-lg text-blue-600">${escapeHtml(r.skor)}</td>
+        <td class="p-4 text-xs font-bold ${r.status.includes('Aman')?'text-green-500':'text-red-500'}">${escapeHtml(r.status)}</td>
       </tr>`).join('');
     }
 
@@ -544,10 +563,12 @@
         let persenSalah = totalPeserta > 0 ? Math.round((salah / totalPeserta) * 100) : 0;
         let color = persenSalah > 50 ? "text-red-500 bg-red-50 font-black" : "text-slate-600";
         
-        let displayKunci = isImageUrl(k.kunci) ? `<a href="${k.kunci}" target="_blank" class="text-blue-500 underline text-xs">Lihat Gambar Kunci</a>` : escapeHtml(k.kunci);
+        let displayKunci = isImageUrl(k.kunci) 
+          ? `<a href="${escapeHtml(k.kunci)}" target="_blank" class="text-blue-500 underline text-xs">Lihat Gambar Kunci</a>` 
+          : escapeHtml(k.kunci);
 
         html += `<tr>
-          <td class="p-4 font-black text-slate-500">No. ${k.id} <span class="text-[10px] block font-normal">${k.mapel}</span></td>
+          <td class="p-4 font-black text-slate-500">No. ${escapeHtml(k.id)} <span class="text-[10px] block font-normal">${escapeHtml(k.mapel)}</span></td>
           <td class="p-4 truncate max-w-[200px] text-xs font-semibold">${displayKunci}</td>
           <td class="p-4 text-green-600 font-bold">${benar} Siswa</td>
           <td class="p-4 text-orange-500 font-bold">${salah} Siswa</td>
@@ -559,7 +580,7 @@
 
     function populateSiswaDropdown() {
       let dd = document.getElementById("filter-nama-siswa");
-      dd.innerHTML = globalRekap.map((r, idx) => `<option value="${idx}">${r.nama} (${r.kelas})</option>`).join('');
+      dd.innerHTML = globalRekap.map((r, idx) => `<option value="${idx}">${escapeHtml(r.nama)} (${escapeHtml(r.kelas)})</option>`).join('');
       renderAnalisisSiswa();
     }
 
@@ -590,11 +611,16 @@
           }
         }
 
-        let displayKunci = isImageUrl(k.kunci) ? `<a href="${k.kunci}" target="_blank" class="text-blue-500 underline text-xs">Gambar Kunci</a>` : escapeHtml(k.kunci);
-        let displayJwb = isImageUrl(jwb) ? `<a href="${jwb}" target="_blank" class="text-blue-500 underline text-xs">Gambar Jawaban</a>` : escapeHtml(jwb);
+        let displayKunci = isImageUrl(k.kunci) 
+          ? `<a href="${escapeHtml(k.kunci)}" target="_blank" class="text-blue-500 underline text-xs">Gambar Kunci</a>` 
+          : escapeHtml(k.kunci);
+          
+        let displayJwb = isImageUrl(jwb) 
+          ? `<a href="${escapeHtml(jwb)}" target="_blank" class="text-blue-500 underline text-xs">Gambar Jawaban</a>` 
+          : escapeHtml(jwb);
 
         html += `<tr>
-          <td class="p-4 font-black text-slate-500">No. ${k.id}</td>
+          <td class="p-4 font-black text-slate-500">No. ${escapeHtml(k.id)}</td>
           <td class="p-4 text-xs font-semibold text-slate-500 truncate max-w-[150px]">${displayKunci}</td>
           <td class="p-4 text-sm font-bold text-blue-900 truncate max-w-[150px]">${displayJwb}</td>
           <td class="p-4 font-black ${isBenar ? 'text-green-500':'text-red-500'}">${isBenar ? '✅ Benar':'❌ Salah'}</td>
@@ -608,10 +634,11 @@
       document.getElementById("btn-recalc").innerText = "Proses...";
       const res = await api({ action: "RECALCULATE_ALL", password: tempPass });
       if(res.status === "success") { 
-        alert("Selesai!"); 
+        alert("Selesai! Seluruh nilai telah dikalkulasi ulang oleh server."); 
         location.reload(); 
       } else { 
-        alert("Gagal menghitung ulang."); 
+        alert("Gagal: " + res.message); 
+        document.getElementById("btn-recalc").innerText = "♻️ Hitung Ulang (Master)";
       }
     }
 
